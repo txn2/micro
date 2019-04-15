@@ -27,8 +27,7 @@ func main() {
 
 	test := flag.Bool("test", true, "A test flag")
 
-	serverCfg, _ := micro.NewServerCfg()
-	serverCfg.Name = "Example"
+	serverCfg, _ := micro.NewServerCfg("Example")
 
 	server := micro.NewServer(serverCfg)
 

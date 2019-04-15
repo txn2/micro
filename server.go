@@ -78,7 +78,7 @@ type Server struct {
 }
 
 // NewServerCfg
-func NewServerCfg() (*ServerCfg, error) {
+func NewServerCfg(name string) (*ServerCfg, error) {
 	if flag.Parsed() {
 		fmt.Println("Flags can not be parsed before server configuration is created. micro.NewServerCfg will call flag.Parse().")
 		os.Exit(1)
@@ -147,7 +147,7 @@ func NewServerCfg() (*ServerCfg, error) {
 	}
 
 	serverCfg := &ServerCfg{
-		Name:         "micro",
+		Name:         name,
 		Ip:           *ip,
 		Port:         *port,
 		Metrics:      *metrics,
