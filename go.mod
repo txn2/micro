@@ -11,5 +11,6 @@ require (
 	github.com/prometheus/client_golang v0.9.2
 	github.com/prometheus/client_model v0.0.0-20190129233127-fd36f4220a90
 	github.com/txn2/ack v1.8.2
+	github.com/txn2/token v0.0.1
 	go.uber.org/zap v1.9.1
 )

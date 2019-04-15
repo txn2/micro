@@ -27,7 +27,10 @@ func main() {
 
 	test := flag.Bool("test", true, "A test flag")
 
-	server := micro.NewServer()
+	serverCfg, _ := micro.NewServerCfg()
+	serverCfg.Name = "Example"
+
+	server := micro.NewServer(serverCfg)
 
 	if *test {
 		server.Router.GET("/test", func(c *gin.Context) {

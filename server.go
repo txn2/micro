@@ -29,6 +29,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	io_prometheus_client "github.com/prometheus/client_model/go"
 	"github.com/txn2/ack"
+	"github.com/txn2/token"
 	"go.uber.org/zap"
 )
 
@@ -44,11 +45,14 @@ var (
 	logoutEnv       = getEnv("LOGOUT", "stdout")
 	readTimeoutEnv  = getEnv("READ_TIMEOUT", "10")
 	writeTimeoutEnv = getEnv("WRITE_TIMEOUT", "10")
+	tokenKeyEnv     = getEnv("TOKEN_KEY", "")
+	tokenExpEnv     = getEnv("TOKEN_EXP", "10") // minutes
 	debugEnv        = getEnv("DEBUG", "false")
 )
 
 // ServerCfg
 type ServerCfg struct {
+	Name         string
 	Ip           string
 	Port         string
 	Metrics      bool
@@ -61,6 +65,8 @@ type ServerCfg struct {
 	Debug        bool
 	ReadTimeout  int
 	WriteTimeout int
+	ClientCfg    *ClientCfg
+	TokenCfg     *token.JwtCfg
 }
 
 // Server
@@ -71,11 +77,10 @@ type Server struct {
 	Client *Client
 }
 
-// NewServer
-func NewServer() *Server {
-
+// NewServerCfg
+func NewServerCfg() (*ServerCfg, error) {
 	if flag.Parsed() {
-		fmt.Println("Flags can not be parsed before server is created. ack.NewServer will call flag.Parse().")
+		fmt.Println("Flags can not be parsed before server configuration is created. micro.NewServerCfg will call flag.Parse().")
 		os.Exit(1)
 	}
 
@@ -94,15 +99,21 @@ func NewServer() *Server {
 		healthzEnvBool = true
 	}
 
-	readTimeoutI, err := strconv.Atoi(readTimeoutEnv)
+	readTimeoutInt, err := strconv.Atoi(readTimeoutEnv)
 	if err != nil {
-		fmt.Println("Parsing error, readTimeout must be an integer id seconds.")
+		fmt.Println("Parsing error, readTimeout must be an integer in seconds.")
 		os.Exit(1)
 	}
 
-	writeTimeoutI, err := strconv.Atoi(writeTimeoutEnv)
+	writeTimeoutInt, err := strconv.Atoi(writeTimeoutEnv)
 	if err != nil {
-		fmt.Println("Parsing error, readTimeout must be an integer id seconds.")
+		fmt.Println("Parsing error, readTimeout must be an integer in seconds.")
+		os.Exit(1)
+	}
+
+	tokenExpEnvInt, err := strconv.Atoi(tokenExpEnv)
+	if err != nil {
+		fmt.Println("Parsing error, token expiration must be an integer in minutes.")
 		os.Exit(1)
 	}
 
@@ -115,8 +126,10 @@ func NewServer() *Server {
 		healthz      = flag.Bool("healthz", healthzEnvBool, "Enable or disable /healthz")
 		healthzUser  = flag.String("healthzUser", healthzUserEnv, "/healthz basic auth username")
 		healthzPass  = flag.String("healthzPass", healthzPassEnv, "/healthz basic auth password")
-		readTimeout  = flag.Int("readTimeout", readTimeoutI, "HTTP read timeout")
-		writeTimeout = flag.Int("writeTimeout", writeTimeoutI, "HTTP write timeout")
+		readTimeout  = flag.Int("readTimeout", readTimeoutInt, "HTTP read timeout")
+		writeTimeout = flag.Int("writeTimeout", writeTimeoutInt, "HTTP write timeout")
+		tokenExp     = flag.Int("tokenExp", tokenExpEnvInt, "JWT Token expiration in minutes")
+		tokenKey     = flag.String("tokenKey", tokenKeyEnv, "JWT Token Key")
 		logout       = flag.String("logout", logoutEnv, "log output stdout | ")
 		debug        = flag.Bool("debug", debugEnvBool, "Debug logging mode")
 	)
@@ -128,7 +141,13 @@ func NewServer() *Server {
 		ConTimeout:          10,
 	}
 
+	tokenCfg := &token.JwtCfg{
+		EncKey: []byte(*tokenKey),
+		Exp:    *tokenExp,
+	}
+
 	serverCfg := &ServerCfg{
+		Name:         "micro",
 		Ip:           *ip,
 		Port:         *port,
 		Metrics:      *metrics,
@@ -141,18 +160,26 @@ func NewServer() *Server {
 		ReadTimeout:  *readTimeout,
 		WriteTimeout: *writeTimeout,
 		Debug:        *debug,
+		ClientCfg:    clientCfg,
+		TokenCfg:     tokenCfg,
 	}
 
 	flag.Parse()
 
+	return serverCfg, nil
+}
+
+// NewServer
+func NewServer(serverCfg *ServerCfg) *Server {
+
 	zapCfg := zap.NewProductionConfig()
 	zapCfg.DisableCaller = true
 	zapCfg.DisableStacktrace = true
-	zapCfg.OutputPaths = []string{*logout}
+	zapCfg.OutputPaths = []string{serverCfg.LogOut}
 
 	gin.SetMode(gin.ReleaseMode)
 
-	if *debug == true {
+	if serverCfg.Debug == true {
 		zapCfg = zap.NewDevelopmentConfig()
 		gin.SetMode(gin.DebugMode)
 	}
@@ -163,10 +190,10 @@ func NewServer() *Server {
 		return nil
 	}
 
-	logger.Info("Starting Ack Server",
-		zap.String("type", "ack_startup"),
-		zap.String("port", *port),
-		zap.String("ip", *ip),
+	logger.Info("Starting "+serverCfg.Name+" Server",
+		zap.String("type", "micro_startup"),
+		zap.String("port", serverCfg.Port),
+		zap.String("ip", serverCfg.Ip),
 	)
 
 	// gin router
@@ -175,29 +202,33 @@ func NewServer() *Server {
 	// gin zap logger middleware
 	r.Use(ginzap.Ginzap(logger, time.RFC3339, true))
 
+	// token middleware
+	jwt := token.NewJwt(*serverCfg.TokenCfg)
+	r.Use(jwt.GinHandler())
+
 	// metrics server (run in go routine)
-	if *metrics {
+	if serverCfg.Metrics {
 		go func() {
 			http.Handle("/metrics", promhttp.Handler())
 
-			logger.Info("Starting Metrics Server",
+			logger.Info("Starting "+serverCfg.Name+" Metrics Server",
 				zap.String("type", "metrics_startup"),
-				zap.String("port", *metricsPort),
-				zap.String("ip", *ip),
+				zap.String("port", serverCfg.MetricsPort),
+				zap.String("ip", serverCfg.MetricsIp),
 			)
 
-			err = http.ListenAndServe(*metricsIp+":"+*metricsPort, nil)
+			err = http.ListenAndServe(serverCfg.MetricsIp+":"+serverCfg.MetricsPort, nil)
 			if err != nil {
-				logger.Fatal("Error Starting Metrics Server", zap.Error(err))
+				logger.Fatal("Error Starting "+serverCfg.Name+" Metrics Server", zap.Error(err))
 				os.Exit(1)
 			}
 		}()
 	}
 
 	// healtz for liveness
-	if *healthz {
+	if serverCfg.Healthz {
 		r.GET("/healthz", gin.BasicAuth(gin.Accounts{
-			*healthzUser: *healthzPass,
+			serverCfg.HealthzUser: serverCfg.HealthzPass,
 		}), HealthzHandler())
 	}
 
@@ -208,7 +239,7 @@ func NewServer() *Server {
 		Cfg:    serverCfg,
 		Logger: logger,
 		Router: r,
-		Client: NewHttpClient(clientCfg),
+		Client: NewHttpClient(serverCfg.ClientCfg),
 	}
 }
 
