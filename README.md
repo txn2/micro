@@ -64,6 +64,8 @@ func main() {
 | -readTimeout  | READ_TIMEOUT         | HTTP read timeout in seconds (default 10)              |
 | -writeTimeout | WRITE_TIMEOUT        | HTTP write timeout (default 10)                                                       |
 |               | AGENT                | Populates the agent key of Ack.                        |
-|               | SERVICE_ENV          | Populates the srv_env key of Ack.                      |
-|               | SERVICE_NS           | Populates the srv_ns key of Ack.                       |
+|               | SERVICE_ENV          | Populates the srv_env key of [Ack].                      |
+|               | SERVICE_NS           | Populates the srv_ns key of [Ack].                       |
 
+
+[Ack]: https://github.com/txn2/ack
