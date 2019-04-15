@@ -33,6 +33,11 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	HealthzDefaultUser     = "healthz"
+	HealthzDefaultPassword = "healthz"
+)
+
 var (
 	ipEnv           = getEnv("IP", "127.0.0.1")
 	portEnv         = getEnv("PORT", "8080")
@@ -40,8 +45,8 @@ var (
 	metricsIpEnv    = getEnv("METRICS_IP", ipEnv)
 	metricsPortEnv  = getEnv("METRICS_PORT", "2112")
 	healthzEnv      = getEnv("HEALTHZ", "true")
-	healthzUserEnv  = getEnv("HEALTHZ_USER", "healthz")
-	healthzPassEnv  = getEnv("HEALTHZ_PASS", "healthz")
+	healthzUserEnv  = getEnv("HEALTHZ_USER", HealthzDefaultUser)
+	healthzPassEnv  = getEnv("HEALTHZ_PASS", HealthzDefaultPassword)
 	logoutEnv       = getEnv("LOGOUT", "stdout")
 	readTimeoutEnv  = getEnv("READ_TIMEOUT", "10")
 	writeTimeoutEnv = getEnv("WRITE_TIMEOUT", "10")
@@ -134,6 +139,8 @@ func NewServerCfg(name string) (*ServerCfg, error) {
 		debug        = flag.Bool("debug", debugEnvBool, "Debug logging mode")
 	)
 
+	flag.Parse()
+
 	clientCfg := &ClientCfg{
 		MaxIdleConnsPerHost: 10,
 		DialContextTimeout:  10,
@@ -164,8 +171,6 @@ func NewServerCfg(name string) (*ServerCfg, error) {
 		TokenCfg:     tokenCfg,
 	}
 
-	flag.Parse()
-
 	return serverCfg, nil
 }
 
@@ -180,6 +185,7 @@ func NewServer(serverCfg *ServerCfg) *Server {
 	gin.SetMode(gin.ReleaseMode)
 
 	if serverCfg.Debug == true {
+		fmt.Println("got here")
 		zapCfg = zap.NewDevelopmentConfig()
 		gin.SetMode(gin.DebugMode)
 	}
@@ -245,6 +251,15 @@ func NewServer(serverCfg *ServerCfg) *Server {
 
 // Run server
 func (srv *Server) Run() {
+
+	// sanity checks
+	if string(srv.Cfg.TokenCfg.EncKey) == "" {
+		srv.Logger.Warn("Token signing key is an empty value.", zap.String("type", "sanity_check"))
+	}
+
+	if srv.Cfg.Healthz == true && srv.Cfg.HealthzPass == HealthzDefaultPassword {
+		srv.Logger.Warn("Healthz is using default / well known password.", zap.String("type", "sanity_check"))
+	}
 
 	s := &http.Server{
 		Addr:           srv.Cfg.Ip + ":" + srv.Cfg.Port,

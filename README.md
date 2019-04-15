@@ -62,10 +62,12 @@ func main() {
 | -metricsIP    | METRICS_IP           | Falls back to same IP as server. (default "127.0.0.1") |
 | -metricsPort  | METRICS_PORT         | Metrics port. (default "2112")                         |
 | -readTimeout  | READ_TIMEOUT         | HTTP read timeout in seconds (default 10)              |
-| -writeTimeout | WRITE_TIMEOUT        | HTTP write timeout (default 10)                                                       |
+| -writeTimeout | WRITE_TIMEOUT        | HTTP write timeout (default 10)                        |
+| -tokenExp     | TOKEN_EXP            | JWT Token expiration in minutes (default 10)           |
+| -tokenKey     | TOKEN_KEY            | JWT Token Key                                          |
 |               | AGENT                | Populates the agent key of Ack.                        |
-|               | SERVICE_ENV          | Populates the srv_env key of [Ack].                      |
-|               | SERVICE_NS           | Populates the srv_ns key of [Ack].                       |
+|               | SERVICE_ENV          | Populates the srv_env key of [Ack].                    |
+|               | SERVICE_NS           | Populates the srv_ns key of [Ack].                     |
 
 
 [Ack]: https://github.com/txn2/ack
