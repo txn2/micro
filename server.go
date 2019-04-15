@@ -80,6 +80,7 @@ type Server struct {
 	Logger *zap.Logger
 	Router *gin.Engine
 	Client *Client
+	Token  *token.Jwt
 }
 
 // NewServerCfg
@@ -246,6 +247,7 @@ func NewServer(serverCfg *ServerCfg) *Server {
 		Logger: logger,
 		Router: r,
 		Client: NewHttpClient(serverCfg.ClientCfg),
+		Token:  jwt,
 	}
 }
 
