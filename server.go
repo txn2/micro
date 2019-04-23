@@ -19,8 +19,10 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"net/http/httputil"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	ginzap "github.com/gin-contrib/zap"
@@ -330,3 +332,37 @@ func getMetrics() (MappedMetricFamily, error) {
 
 // MappedMetricFamily
 type MappedMetricFamily map[string]*io_prometheus_client.MetricFamily
+
+// PxyCfg
+type PxyCfg struct {
+	Scheme *string // http, https
+	Host   *string // elasticsearch:9200
+	Strip  *string // /db
+}
+
+// reverseProxy
+func (srv *Server) ReverseProxy(cfg PxyCfg) gin.HandlerFunc {
+
+	if cfg.Host == nil {
+		srv.Logger.Error("no host set for ReverseProxy")
+	}
+
+	if cfg.Scheme == nil {
+		scheme := "http"
+		cfg.Scheme = &scheme
+	}
+
+	return func(c *gin.Context) {
+		director := func(req *http.Request) {
+			req.URL.Scheme = *cfg.Scheme
+			req.URL.Host = *cfg.Host
+		}
+
+		if cfg.Strip != nil {
+			c.Request.URL.Path = strings.TrimPrefix(c.Request.URL.Path, *cfg.Strip)
+		}
+
+		proxy := &httputil.ReverseProxy{Director: director}
+		proxy.ServeHTTP(c.Writer, c.Request)
+	}
+}
