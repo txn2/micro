@@ -175,6 +175,16 @@ func NewServerCfg(name string) (*ServerCfg, error) {
 }
 
 // NewServer
+//
+// 	serverCfg, _ := micro.NewServerCfg("Example")
+//	server := micro.NewServer(serverCfg)
+//
+//	server.Router.GET("/test", func(c *gin.Context) {
+//
+//	})
+//
+//	server.Run()
+//
 func NewServer(serverCfg *ServerCfg) *Server {
 
 	zapCfg := zap.NewProductionConfig()
