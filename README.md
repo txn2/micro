@@ -1,4 +1,7 @@
 ![micro](https://raw.githubusercontent.com/txn2/micro/master/mast.jpg)
+[![Go Report Card](https://goreportcard.com/badge/github.com/txn2/micro)](https://goreportcard.com/report/github.com/txn2/micro)
+[![GoDoc](https://godoc.org/github.com/txn2/micro?status.svg)](https://godoc.org/github.com/txn2/micro)
+
 
 WIP: Micro wraps gin-gonic and contains flag and environment variable configuration for
 providing health and metrics endpoints:
