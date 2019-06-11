@@ -195,7 +195,7 @@ func NewServer(serverCfg *ServerCfg) *Server {
 	gin.SetMode(gin.ReleaseMode)
 
 	if serverCfg.Debug == true {
-		fmt.Printf("DEBUG MODE ON")
+		fmt.Println(" --------- DEBUG MODE ON --------- ")
 		zapCfg = zap.NewDevelopmentConfig()
 		gin.SetMode(gin.DebugMode)
 	}
