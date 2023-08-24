@@ -9,7 +9,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package micro is a gin-gonic micro services wrapper.
+// Package micro is a gin-gonic wrapper.
 package micro
 
 import (
@@ -26,7 +26,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	io_prometheus_client "github.com/prometheus/client_model/go"
+	ioprometheusclient "github.com/prometheus/client_model/go"
 	"github.com/txn2/ack"
 	"github.com/txn2/token"
 	"go.uber.org/zap"
@@ -54,7 +54,6 @@ var (
 	debugEnv        = getEnv("DEBUG", "false")
 )
 
-// ServerCfg
 type ServerCfg struct {
 	Name         string
 	Ip           string
@@ -73,7 +72,6 @@ type ServerCfg struct {
 	TokenCfg     *token.JwtCfg
 }
 
-// Server
 type Server struct {
 	Cfg    *ServerCfg
 	Logger *zap.Logger
@@ -82,7 +80,6 @@ type Server struct {
 	Token  *token.Jwt
 }
 
-// NewServerCfg
 func NewServerCfg(name string) (*ServerCfg, error) {
 	if flag.Parsed() {
 		fmt.Println("Flags can not be parsed before server configuration is created. micro.NewServerCfg will call flag.Parse().")
@@ -176,7 +173,7 @@ func NewServerCfg(name string) (*ServerCfg, error) {
 
 // NewServer
 //
-// 	serverCfg, _ := micro.NewServerCfg("Example")
+//	serverCfg, _ := micro.NewServerCfg("Example")
 //	server := micro.NewServer(serverCfg)
 //
 //	server.Router.GET("/test", func(c *gin.Context) {
@@ -184,7 +181,6 @@ func NewServerCfg(name string) (*ServerCfg, error) {
 //	})
 //
 //	server.Run()
-//
 func NewServer(serverCfg *ServerCfg) *Server {
 
 	zapCfg := zap.NewProductionConfig()
@@ -297,7 +293,6 @@ func getEnv(key, fallback string) string {
 	return value
 }
 
-// HealthzHandler
 func HealthzHandler() func(c *gin.Context) {
 	return func(c *gin.Context) {
 		ak := ack.Gin(c)
@@ -313,7 +308,6 @@ func HealthzHandler() func(c *gin.Context) {
 	}
 }
 
-// NoRouteHandler
 func NoRouteHandler() func(c *gin.Context) {
 	return func(c *gin.Context) {
 		ak := ack.Gin(c)
@@ -322,9 +316,8 @@ func NoRouteHandler() func(c *gin.Context) {
 	}
 }
 
-// setHeaders
 func getMetrics() (MappedMetricFamily, error) {
-	mmf := make(MappedMetricFamily, 0)
+	mmf := make(MappedMetricFamily)
 	mf, err := prometheus.DefaultGatherer.Gather()
 	if err != nil {
 		return mmf, err
@@ -337,17 +330,14 @@ func getMetrics() (MappedMetricFamily, error) {
 	return mmf, nil
 }
 
-// MappedMetricFamily
-type MappedMetricFamily map[string]*io_prometheus_client.MetricFamily
+type MappedMetricFamily map[string]*ioprometheusclient.MetricFamily
 
-// PxyCfg
 type PxyCfg struct {
 	Scheme *string // http, https
 	Host   *string // elasticsearch:9200
 	Strip  *string // /db
 }
 
-// reverseProxy
 func (srv *Server) ReverseProxy(cfg PxyCfg) gin.HandlerFunc {
 
 	if cfg.Host == nil {
